@@ -1,12 +1,21 @@
 import pygame
 import random
 
-# Constantes
-GRID_SIZE = 20
-CELL_SIZE = 40
-LARGEUR_GRILLE=GRID_SIZE * CELL_SIZE+550
-WIDTH = LARGEUR_GRILLE
-HEIGHT = GRID_SIZE * CELL_SIZE
+pygame.init()
+
+screen_info = pygame.display.Info()
+screen_width = screen_info.current_w
+screen_height = screen_info.current_h
+
+#screen_width = 600
+#screen_height = 600
+
+# Calcul des tailles pour 42 lignes et 72 colonnes
+CELL_SIZE = min(screen_height // 42, screen_width // 72)  # Taille de la cellule pour 42x72 grille
+GRID_SIZE = 72  # Nombre de colonnes
+LARGEUR_GRILLE = GRID_SIZE * CELL_SIZE  # Largeur totale de la grille
+HEIGHT = 42 * CELL_SIZE  # Hauteur totale de la grille
+WIDTH = LARGEUR_GRILLE  # Largeur de la fenêtre
 FPS = 30
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -74,9 +83,15 @@ class Unit:
 
     def move(self, dx, dy):
         """Déplace l'unité de dx, dy."""
-        if 0 <= self.x + dx < LARGEUR_GRILLE/CELL_SIZE and 0 <= self.y + dy < 20 :
-            self.x += dx
-            self.y += dy
+        L=[[0, 13], [1, 13], [7, 13], [8, 13], [4, 22], [3, 22], [20, 19], [20, 18], [20, 17], [21, 17], [22, 17], [22, 18], [22, 19], [18, 5], [19, 5], [18, 4], [18, 3], [18, 2], [18, 1], [17, 1], [16, 1], [16, 2], [16, 3], [16, 4]]
+        depla=True
+        for i in range(len(L)):
+            if (self.x + dx ==L[i][0] and self.y + dy ==L[i][1]):
+                depla = False
+        if(depla ):
+            if 0 <= self.x + dx < LARGEUR_GRILLE/CELL_SIZE  and 0 <= self.y + dy < HEIGHT/CELL_SIZE :
+                self.x += dx
+                self.y += dy
     def show_attack(self,screen):
         image_paths = [self.type_attaque[0][1][0],self.type_attaque[1][1][0], self.type_attaque[2][1][0],self.type_attaque[3][1][0]]
         # Police
