@@ -3,6 +3,7 @@ import random
 
 from unit import *
 from level import *
+from EcranAccueil import *
 
 class Game:
     """
@@ -34,7 +35,7 @@ class Game:
                              [["Katon - Nuées ardentes"],["image_tech/Haisekish__1.png"], [80], [10], [2], [20]],
                              [["Katon - balsamine"],["image_tech/Katon_-_Balsamine_Pourpre.png"], [50], [0], [2], [5]],
                              [["Katon - Embrasement"],["image_tech/Katon_-_G_ka_Mekkyaku.png"], [100], [5], [30], [60]],]
-        affinite="Katon"
+        affinite= "Katon"
 
         attaque_basique_feu = [
             [["Katon-boule de feu"], ["image_tech/Katon-Goukakyuu-no-Jutsu.jpg"], [90], [0], [20], [50]],
@@ -50,6 +51,7 @@ class Game:
                             Unit(7, 6, 120, 1, 'enemy',attaque_basique_feu,200,affinite)]
 
     def handle_player_turn(self):
+        L=[]
         """Tour du joueur"""
         for selected_unit in self.player_units:
 
@@ -87,6 +89,9 @@ class Game:
                         if event.key == pygame.K_a:  # Touche 'A'
                              pv_attack=selected_unit.show_attack(self.screen)
                              #self.flip_display()
+                        if event.key == pygame.K_o:  # Touche 'A'
+                             L.append([selected_unit.x,selected_unit.y])
+                             print(L)
 
                         # Attaque (touche espace) met fin au tour
                         if event.key == pygame.K_SPACE:
@@ -127,7 +132,7 @@ class Game:
         for x in range(0, LARGEUR_GRILLE, CELL_SIZE):
             for y in range(0, HEIGHT, CELL_SIZE):
                 rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
-               # pygame.draw.rect(self.screen, WHITE, rect, 1)
+                pygame.draw.rect(self.screen, WHITE, rect, 1)
 
 
         # Affiche les unités
@@ -141,22 +146,28 @@ class Game:
 
 
 def main():
-
     # Initialisation de Pygame
     pygame.init()
-    # Instanciation de la fenêtre
+
+    # Création de la fenêtre avec les dimensions de l'écran (via les constantes de Unit)
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Mon jeu de stratégie")
 
-    # Instanciation du jeu
-    print(type(screen))
-    game = Game(screen)
-    #initalisation de l'environement et son
-    #play_music(screen)
+    # Afficher l'écran d'accueil
+    ecran_accueil = EcranAccueil(screen)
+    
+    # Si le bouton PLAY est cliqué, le jeu commence
+    if ecran_accueil.boucle_principale():
+        # Maintenant, on peut importer Game ici, après que l'écran d'accueil est terminé
+        from game import Game  # Importation de Game après l'écran d'accueil
+        
+        # Lancer le jeu une fois que l'écran d'accueil est terminé
+        game = Game(screen)
 
-    # Boucle principale du jeu
-    while True:
-        game.handle_player_turn()
-        game.handle_enemy_turn()
+        # Boucle principale du jeu
+        while True:
+            game.handle_player_turn()
+            game.handle_enemy_turn()
+
 if __name__ == "__main__":
     main()
