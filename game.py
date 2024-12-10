@@ -4,6 +4,7 @@ import random
 from unit import *
 from level import *
 from EcranAccueil import *
+from Soins import *
 
 class Game:
     """
@@ -49,6 +50,17 @@ class Game:
 
         self.enemy_units = [Unit(6, 6, 120, 0, 'enemy',attaque_basique_feu,200,affinite),
                             Unit(7, 6, 120, 1, 'enemy',attaque_basique_feu,200,affinite)]
+        
+        
+        ##### MODIF CLASS SOINS
+        # Charger les images des cases de soin
+        images = charger_images()
+        # Générer les cases de soin
+        self.cases = generer_cases(images)  # Liste des cases de soin
+        #########
+
+        
+        
 
     def handle_player_turn(self):
         L=[]
@@ -56,9 +68,10 @@ class Game:
         for selected_unit in self.player_units:
 
             # Tant que l'unité n'a pas terminé son tour
-            has_acted = False# tour pas terminé
+            has_acted = False # tour pas terminé
             selected_unit.is_selected = True
-            self.flip_display()# mis a jour de l'affichage
+            self.flip_display() # mis a jour de l'affichage
+            
             while not has_acted:
 
                 # Important: cette boucle permet de gérer les événements Pygame
@@ -92,7 +105,19 @@ class Game:
                         if event.key == pygame.K_o:  # Touche 'A'
                              L.append([selected_unit.x,selected_unit.y])
                              print(L)
-
+                             
+                             
+                        ##### MODIF SOINS   
+                        # Si le joueur appuie sur 'Espace', vérifier s'il est sur une case de soin
+                        if event.key == pygame.K_SPACE:
+                            for case in self.cases:
+                                if isinstance(case, Soins) and case.case_soin(selected_unit):
+                                    # Si la case de soin a été utilisée, la retirer
+                                    self.cases.remove(case)
+                                    break  # Une fois qu'on a utilisé la case, on arrête de chercher
+                         ##############   
+                         
+                         
                         # Attaque (touche espace) met fin au tour
                         if event.key == pygame.K_SPACE:
                             for enemy in self.enemy_units:
@@ -103,6 +128,7 @@ class Game:
 
                             has_acted = True
                             selected_unit.is_selected = False
+   
 
     def handle_enemy_turn(self):
         """IA très simple pour les ennemis."""
@@ -138,6 +164,15 @@ class Game:
         # Affiche les unités
         for unit in self.player_units + self.enemy_units:
             unit.draw(self.screen)
+            
+            
+        
+            
+        ##### MODIF CLASS SOINS
+        # Affiche les cases de soin
+        for case in self.cases:  
+            case.afficher_case(self.screen)
+        ##### MODIF CLASS SOINS
 
 
 

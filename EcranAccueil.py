@@ -6,7 +6,6 @@ Created on Sat Dec  7 13:34:50 2024
 @author: camelia
 """
 
-
 import pygame
 from unit import *
 
@@ -14,10 +13,18 @@ class EcranAccueil:
     def __init__(self, screen):
         self.screen = screen
         self.running = True
+        # Charger l'image de fond
+        self.background = pygame.image.load("Ecran_acc/fond3.png")
+        self.background = pygame.transform.scale(self.background, (WIDTH, HEIGHT))  
         
 
-    def afficher_texte(self, texte, taille, couleur, x, y):
-        font = pygame.font.Font(None, taille)
+    def afficher_texte(self, texte, taille, couleur, x, y, police_path = None):
+        # Si une police personnalisée est donnée, l'utiliser, sinon utiliser la police par défaut
+        if police_path:
+            font = pygame.font.Font(police_path, taille)
+        else:
+            font = pygame.font.Font(None, taille)  # Police par défaut
+
         surface = font.render(texte, True, couleur)
         rect = surface.get_rect(center=(x, y))
         self.screen.blit(surface, rect)
@@ -32,10 +39,12 @@ class EcranAccueil:
         bouton_y = (HEIGHT // 2) + 100
 
         while self.running:
-            self.screen.fill(BLACK)  # Fond noir
+            
+            # Afficher l'image de fond
+            self.screen.blit(self.background, (0, 0))
 
             # Texte principal
-            self.afficher_texte("Mon Jeu de Stratégie", 80, WHITE, WIDTH // 2, HEIGHT // 4)
+            self.afficher_texte("Mon Jeu de Stratégie", 80, BLACK, WIDTH // 2, HEIGHT // 4, "police/police3.ttf")
 
             # Instructions
             self.afficher_texte("Appuyez sur PLAY pour commencer", 80, WHITE, WIDTH // 2, HEIGHT // 2)
