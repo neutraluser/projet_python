@@ -3,6 +3,8 @@ import random
 
 from unit import *
 from level import *
+from EcranAccueil import *
+from Soins import *
 
 class Game:
     """
@@ -34,7 +36,7 @@ class Game:
                              [["Katon - Nuées ardentes"],["image_tech/Haisekish__1.png"], [80], [10], [2], [20]],
                              [["Katon - balsamine"],["image_tech/Katon_-_Balsamine_Pourpre.png"], [50], [0], [2], [5]],
                              [["Katon - Embrasement"],["image_tech/Katon_-_G_ka_Mekkyaku.png"], [100], [5], [30], [60]],]
-        affinite="Katon"
+        affinite= "Katon"
 
         attaque_basique_feu = [
             [["Katon-boule de feu"], ["image_tech/Katon-Goukakyuu-no-Jutsu.jpg"], [90], [0], [20], [50]],
@@ -48,15 +50,28 @@ class Game:
 
         self.enemy_units = [Unit(6, 6, 120, 0, 'enemy',attaque_basique_feu,200,affinite),
                             Unit(7, 6, 120, 1, 'enemy',attaque_basique_feu,200,affinite)]
+        
+        
+        ##### MODIF CLASS SOINS
+        # Charger les images des cases de soin
+        images = charger_images()
+        # Générer les cases de soin
+        self.cases = generer_cases(images)  # Liste des cases de soin
+        #########
+
+        
+        
 
     def handle_player_turn(self):
+        L=[]
         """Tour du joueur"""
         for selected_unit in self.player_units:
 
             # Tant que l'unité n'a pas terminé son tour
-            has_acted = False# tour pas terminé
+            has_acted = False # tour pas terminé
             selected_unit.is_selected = True
-            self.flip_display()# mis a jour de l'affichage
+            self.flip_display() # mis a jour de l'affichage
+            
             while not has_acted:
 
                 # Important: cette boucle permet de gérer les événements Pygame
@@ -87,7 +102,22 @@ class Game:
                         if event.key == pygame.K_a:  # Touche 'A'
                              pv_attack=selected_unit.show_attack(self.screen)
                              #self.flip_display()
-
+                        if event.key == pygame.K_o:  # Touche 'A'
+                             L.append([selected_unit.x,selected_unit.y])
+                             print(L)
+                             
+                             
+                        ##### MODIF SOINS   
+                        # Si le joueur appuie sur 'Espace', vérifier s'il est sur une case de soin
+                        if event.key == pygame.K_SPACE:
+                            for case in self.cases:
+                                if isinstance(case, Soins) and case.case_soin(selected_unit):
+                                    # Si la case de soin a été utilisée, la retirer
+                                    self.cases.remove(case)
+                                    break  # Une fois qu'on a utilisé la case, on arrête de chercher
+                         ##############   
+                         
+                         
                         # Attaque (touche espace) met fin au tour
                         if event.key == pygame.K_SPACE:
                             for enemy in self.enemy_units:
@@ -98,6 +128,7 @@ class Game:
 
                             has_acted = True
                             selected_unit.is_selected = False
+   
 
     def handle_enemy_turn(self):
         """IA très simple pour les ennemis."""
@@ -127,12 +158,21 @@ class Game:
         for x in range(0, LARGEUR_GRILLE, CELL_SIZE):
             for y in range(0, HEIGHT, CELL_SIZE):
                 rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
-               # pygame.draw.rect(self.screen, WHITE, rect, 1)
+                pygame.draw.rect(self.screen, WHITE, rect, 1)
 
 
         # Affiche les unités
         for unit in self.player_units + self.enemy_units:
             unit.draw(self.screen)
+            
+            
+        
+            
+        ##### MODIF CLASS SOINS
+        # Affiche les cases de soin
+        for case in self.cases:  
+            case.afficher_case(self.screen)
+        ##### MODIF CLASS SOINS
 
 
 
@@ -141,22 +181,28 @@ class Game:
 
 
 def main():
-
     # Initialisation de Pygame
     pygame.init()
-    # Instanciation de la fenêtre
+
+    # Création de la fenêtre avec les dimensions de l'écran (via les constantes de Unit)
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Mon jeu de stratégie")
 
-    # Instanciation du jeu
-    print(type(screen))
-    game = Game(screen)
-    #initalisation de l'environement et son
-    #play_music(screen)
+    # Afficher l'écran d'accueil
+    ecran_accueil = EcranAccueil(screen)
+    
+    # Si le bouton PLAY est cliqué, le jeu commence
+    if ecran_accueil.boucle_principale():
+        # Maintenant, on peut importer Game ici, après que l'écran d'accueil est terminé
+        from game import Game  # Importation de Game après l'écran d'accueil
+        
+        # Lancer le jeu une fois que l'écran d'accueil est terminé
+        game = Game(screen)
 
-    # Boucle principale du jeu
-    while True:
-        game.handle_player_turn()
-        game.handle_enemy_turn()
+        # Boucle principale du jeu
+        while True:
+            game.handle_player_turn()
+            game.handle_enemy_turn()
+
 if __name__ == "__main__":
     main()

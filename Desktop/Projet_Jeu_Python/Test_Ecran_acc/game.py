@@ -1,78 +1,57 @@
 import pygame
 import random
-
 from unit import *
 from level import *
+from competences import Competence
+from Personnage import *
+from Ecranselection import *
 from EcranAccueil import *
 
+
+
+# Personnages
+personnage_feu = Personnage("Edan", 150, 200, "Feu", "sprites/feu.webp")
+personnage_eau = Personnage("Oceane", 120, 180, "Eau","sprites/eau.webp")
+personnage_foudre = Personnage("Zeus", 110, 190, "Foudre","sprites/foudre.webp")
 class Game:
-    """
-    Classe pour représenter le jeu.
-
-    ...
-    Attributs
-    ---------
-    screen: pygame.Surface
-        La surface de la fenêtre du jeu.
-    player_units : list[Unit]
-        La liste des unités du joueur.
-    enemy_units : list[Unit]
-        La liste des unités de l'adversaire.
-    """
-
-    def __init__(self, screen):
-        """
-        Construit le jeu avec la surface de la fenêtre.
-
-        Paramètres
-        ----------
-        screen : pygame.Surface
-            La surface de la fenêtre du jeu.
-        """
-        #===========la liste des attaques sont données comme suit==============>
-        #[nom],[image],[Puissance d’attaque],[terrain	Puissance de défence],[Cout chakra]
-        attaque_basique_feu=[[["Katon-boule de feu"],["image_tech/Katon-Goukakyuu-no-Jutsu.jpg"],[90],[0],[20],[50]],
-                             [["Katon - Nuées ardentes"],["image_tech/Haisekish__1.png"], [80], [10], [2], [20]],
-                             [["Katon - balsamine"],["image_tech/Katon_-_Balsamine_Pourpre.png"], [50], [0], [2], [5]],
-                             [["Katon - Embrasement"],["image_tech/Katon_-_G_ka_Mekkyaku.png"], [100], [5], [30], [60]],]
-        affinite= "Katon"
-
-        attaque_basique_feu = [
-            [["Katon-boule de feu"], ["image_tech/Katon-Goukakyuu-no-Jutsu.jpg"], [90], [0], [20], [50]],
-            [["Katon - Nuées ardentes"], ["image_tech/Haisekish__1.png"], [80], [10], [2], [20]],
-            [["Katon - balsamine"], ["image_tech/Katon_-_Balsamine_Pourpre.png"], [50], [0], [2], [5]],
-            [["Katon - Embrasement"], ["image_tech/Katon_-_G_ka_Mekkyaku.png"], [100], [5], [30], [60]], ]
-        affinite = "Katon"
+    def __init__(self, screen, joueur, personnages_choisis): ###### AJOUT DE personnages_choisis
         self.screen = screen #position(x,y)
-        self.player_units = [Unit(0, 6, 100, 2, 'player',attaque_basique_feu,200,affinite),
-                             Unit(1, 0, 100, 2, 'player',attaque_basique_feu,200,affinite)]
+        
+        ###### AJOUT pour choix du perso
+        self.joueur1 = personnages_choisis[0]  # Personnage du joueur 1
+        self.joueur2 = personnages_choisis[1]  # Personnage du joueur 2
+        ###### AJOUT pour choix du perso
+        
+        
+        
+        self.player_units = [
+            Unit(0, 6, joueur.health, 1, "player", joueur.competences, joueur.chakra, joueur.affinite,joueur.image),
+            Unit(0, 6, joueur.health, 1, "player", joueur.competences, joueur.chakra, joueur.affinite,joueur.image)
+        ]
+        self.enemy_units = [
+            Unit(6, 6, 120, 80, "enemy", Competence("Feu"), 200, "Feu"),
+            Unit(7, 6, 120, 80, "enemy",Competence("Feu"), 200, "Feu")
+        ]
+        
 
-        self.enemy_units = [Unit(6, 6, 120, 0, 'enemy',attaque_basique_feu,200,affinite),
-                            Unit(7, 6, 120, 1, 'enemy',attaque_basique_feu,200,affinite)]
 
     def handle_player_turn(self):
-        L=[]
-        """Tour du joueur"""
+        """Handles the player's turn."""
         for selected_unit in self.player_units:
-
-            # Tant que l'unité n'a pas terminé son tour
-            has_acted = False# tour pas terminé
+            has_acted = False
             selected_unit.is_selected = True
-            self.flip_display()# mis a jour de l'affichage
+            pv_attack = None
+            self.flip_display()
+
             while not has_acted:
-
-                # Important: cette boucle permet de gérer les événements Pygame
+              
+                
                 for event in pygame.event.get():
-
-                    # Gestion de la fermeture de la fenêtre
                     if event.type == pygame.QUIT:
                         pygame.quit()
                         exit()
 
-                    # Gestion des touches du clavier
                     if event.type == pygame.KEYDOWN:
-
-                        # Déplacement (touches fléchées)
                         dx, dy = 0, 0
                         if event.key == pygame.K_LEFT:
                             dx = -1
@@ -82,43 +61,59 @@ class Game:
                             dy = -1
                         elif event.key == pygame.K_DOWN:
                             dy = 1
+
                         selected_unit.move(dx, dy)
                         self.flip_display()
-                        pv_attack=selected_unit.attack_power
-
+                        
                         if event.key == pygame.K_a:  # Touche 'A'
-                             pv_attack=selected_unit.show_attack(self.screen)
-                             #self.flip_display()
-                        if event.key == pygame.K_o:  # Touche 'A'
-                             L.append([selected_unit.x,selected_unit.y])
-                             print(L)
+                            #print(selected_unit.type_attaque.image_path_attaque1)
 
-                        # Attaque (touche espace) met fin au tour
+                            pv_attack = selected_unit.show_attack(self.screen)
+                            
+                            
+                        print(f"pv_attack before SPACE key: {pv_attack}")  # Vérifiez avant SPACE
+
                         if event.key == pygame.K_SPACE:
                             for enemy in self.enemy_units:
                                 if abs(selected_unit.x - enemy.x) <= 1 and abs(selected_unit.y - enemy.y) <= 1:
-                                    selected_unit.attack(enemy,pv_attack)
+                                    if pv_attack is not None:  # Vérifiez si une compétence est sélectionnée
+                                        print(f"Attacking enemy at ({enemy.x}, {enemy.y}) with competence index: {pv_attack}")
+                                        selected_unit.attack(enemy, pv_attack)
+                                        print(f"pv_attack after attack: {pv_attack}")
+                                    else:
+                                        print("Aucune compétence sélectionnée. Attaque annulée.")
+
                                     if enemy.health <= 0:
+                                        print(f"Enemy unit at ({enemy.x}, {enemy.y}) defeated.")
                                         self.enemy_units.remove(enemy)
+                                        break  # Stop attacking if the enemy is removed
 
                             has_acted = True
                             selected_unit.is_selected = False
 
-    def handle_enemy_turn(self):
-        """IA très simple pour les ennemis."""
-        for enemy in self.enemy_units:
 
-            # Déplacement aléatoire
+    def handle_enemy_turn(self):
+        """Simple AI for enemy turns."""
+        for enemy in self.enemy_units:
+            if not self.player_units:
+                print("All player units have been defeated!")
+                return
+
             target = random.choice(self.player_units)
+            pv = random.randint(0, len(enemy.type_attaque) - 1)
+
             dx = 1 if enemy.x < target.x else -1 if enemy.x > target.x else 0
             dy = 1 if enemy.y < target.y else -1 if enemy.y > target.y else 0
             enemy.move(dx, dy)
-
-            # Attaque si possible
+            
             if abs(enemy.x - target.x) <= 1 and abs(enemy.y - target.y) <= 1:
-                enemy.attack(target)
+                enemy.attack(target, pv)
+
                 if target.health <= 0:
+                    print(f"Player unit at ({target.x}, {target.y}) defeated.")
                     self.player_units.remove(target)
+
+
 
     def flip_display(self):
         """Affiche le jeu."""
@@ -132,7 +127,7 @@ class Game:
         for x in range(0, LARGEUR_GRILLE, CELL_SIZE):
             for y in range(0, HEIGHT, CELL_SIZE):
                 rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
-                pygame.draw.rect(self.screen, WHITE, rect, 1)
+               # pygame.draw.rect(self.screen, WHITE, rect, 1)
 
 
         # Affiche les unités
@@ -145,29 +140,48 @@ class Game:
         pygame.display.flip()
 
 
+
 def main():
     # Initialisation de Pygame
     pygame.init()
 
-    # Création de la fenêtre avec les dimensions de l'écran (via les constantes de Unit)
+    # Création de la fenêtre
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Mon jeu de stratégie")
 
-    # Afficher l'écran d'accueil
-    ecran_accueil = EcranAccueil(screen)
-    
-    # Si le bouton PLAY est cliqué, le jeu commence
-    if ecran_accueil.boucle_principale():
-        # Maintenant, on peut importer Game ici, après que l'écran d'accueil est terminé
-        from game import Game  # Importation de Game après l'écran d'accueil
-        
-        # Lancer le jeu une fois que l'écran d'accueil est terminé
-        game = Game(screen)
+    running = True
+    while running:
+        # Lancer l'écran d'accueil
+        ecran_accueil = EcranAccueil(screen)
+        choix = ecran_accueil.boucle_principale()
 
-        # Boucle principale du jeu
-        while True:
-            game.handle_player_turn()
-            game.handle_enemy_turn()
+        if choix == "play":
+            # Lancer l'écran de sélection des personnages
+            ecran_selection = EcranSelection(screen)
+            personnages_choisis = ecran_selection.boucle_principale()  # Obtenez les personnages choisis pour les 2 joueurs
+
+            # Si les personnages choisis sont valides
+            if len(personnages_choisis) == 2:
+                print(f"Personnages choisis : {personnages_choisis[0].name} (Joueur 1), {personnages_choisis[1].name} (Joueur 2)")
+
+                # Lancer le jeu avec les personnages choisis
+                game = Game(screen, personnages_choisis[0], personnages_choisis)  # Passez le premier personnage pour le joueur 1 et les deux personnages pour le jeu
+                while True:
+                    game.handle_player_turn()
+                    game.handle_enemy_turn()
+            else:
+                print("Erreur : Vous devez choisir un personnage pour chaque joueur.")
+                continue  # Retour à l'écran de sélection si les personnages sont invalides
+
+        elif choix == "regles":
+            # Lancer l'écran des règles
+            ecran_regles = EcranRegles(screen)
+            if ecran_regles.boucle_principale() == "retour":
+                continue  # Retourner à l'écran d'accueil
+
+
+
+
 
 if __name__ == "__main__":
     main()
