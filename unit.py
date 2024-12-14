@@ -1,5 +1,6 @@
 import pygame
 import random
+from competences import *
 
 pygame.init()
 
@@ -7,15 +8,11 @@ screen_info = pygame.display.Info()
 screen_width = screen_info.current_w
 screen_height = screen_info.current_h
 
-#screen_width = 600
-#screen_height = 600
-
-# Calcul des tailles pour 42 lignes et 72 colonnes
-CELL_SIZE = min(screen_height // 42, screen_width // 72)  # Taille de la cellule pour 42x72 grille
-GRID_SIZE = 72  # Nombre de colonnes
-LARGEUR_GRILLE = GRID_SIZE * CELL_SIZE  # Largeur totale de la grille
-HEIGHT = 42 * CELL_SIZE  # Hauteur totale de la grille
-WIDTH = LARGEUR_GRILLE  # Largeur de la fenêtre
+CELL_SIZE = min(screen_height // 42, screen_width // 72)
+GRID_SIZE = 72
+LARGEUR_GRILLE = GRID_SIZE * CELL_SIZE
+HEIGHT = 42 * CELL_SIZE
+WIDTH = LARGEUR_GRILLE
 FPS = 30
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -23,215 +20,241 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 
-
 class Unit:
-    """
-    Classe pour représenter une unité.
-
-    ...
-    Attributs
-    ---------
-    x : int
-        La position x de l'unité sur la grille.
-    y : int
-        La position y de l'unité sur la grille.
-    health : int
-        La santé de l'unité.
-    attack_power : int
-        La puissance d'attaque de l'unité.
-    team : str
-        L'équipe de l'unité ('player' ou 'enemy').
-    is_selected : bool
-        Si l'unité est sélectionnée ou non.
-
-    Méthodes
-    --------
-    move(dx, dy)
-        Déplace l'unité de dx, dy.
-    attack(target)
-        Attaque une unité cible.
-    draw(screen)
-        Dessine l'unité sur la grille.
-    """
-
-    def __init__(self, x, y, health, attack_power, team,type_attaque,chakra,affinite):
-        """
-        Construit une unité avec une position, une santé, une puissance d'attaque et une équipe.
-
-        Paramètres
-        ----------
-        x : int
-            La position x de l'unité sur la grille.
-        y : int
-            La position y de l'unité sur la grille.
-        health : int
-            La santé de l'unité.
-        attack_power : int
-            La puissance d'attaque de l'unité.
-        team : str
-            L'équipe de l'unité ('player' ou 'enemy').
-        """
+    def __init__(self, x, y, health, attack_power, team, competences, chakra, affinite, image, vitesse):
         self.x = x
         self.y = y
         self.health = health
         self.attack_power = attack_power
-        self.team = team  # 'player' ou 'enemy'
+        self.team = team
         self.is_selected = False
-        self.type_attaque=type_attaque
-        self.chakra=chakra
-        self.affinite=affinite
+        self.competences = competences
+        self.chakra = chakra
+        self.affinite = affinite  # affinité de l'attaquant
+        self.image = pygame.image.load(image)
+        self.image = pygame.transform.scale(self.image, (CELL_SIZE, CELL_SIZE))
+        self.vitesse = vitesse
 
-    def move(self, dx, dy):
-        """Déplace l'unité de dx, dy."""
-        L=[[0, 13], [1, 13], [7, 13], [8, 13], [4, 22], [3, 22], [20, 19], [20, 18], [20, 17], [21, 17], [22, 17], [22, 18], [22, 19], [18, 5], [19, 5], [18, 4], [18, 3], [18, 2], [18, 1], [17, 1], [16, 1], [16, 2], [16, 3], [16, 4]]
-        depla=True
-        for i in range(len(L)):
-            if (self.x + dx ==L[i][0] and self.y + dy ==L[i][1]):
-                depla = False
-        if(depla ):
-            if 0 <= self.x + dx < LARGEUR_GRILLE/CELL_SIZE  and 0 <= self.y + dy < HEIGHT/CELL_SIZE :
-                self.x += dx
-                self.y += dy
-    def show_attack(self,screen):
-        image_paths = [self.type_attaque[0][1][0],self.type_attaque[1][1][0], self.type_attaque[2][1][0],self.type_attaque[3][1][0]]
-        # Police
-        font_title = pygame.font.Font(None, 36)  # Police pour le titre
+    @staticmethod
+    def ajuster_degats(base_puissance, affinite_attaque, affinite_cible):
+        """
+        Ajuste les dégâts en fonction de l'affinité de l'attaquant et de la cible.
+        """
+        modifiers = {
+            "Feu": {"Feu":1.0,"Eau":0.8,"Foudre":1.2},
+            "Eau": {"Feu":2.0,"Eau":1.0,"Foudre":0.8},
+            "Foudre": {"Feu":0.9,"Eau":1.1,"Foudre":1.0}
+        }
+
+        # Si jamais une affinité manque, on par défaut utilise un multiplicateur de 1
+        aff_attack = affinite_attaque if affinite_attaque in modifiers else "Feu"
+        aff_target = affinite_cible if affinite_cible in modifiers[aff_attack] else "Feu"
+        mult = modifiers[aff_attack].get(aff_target, 1.0)
+        return base_puissance * mult
+
+    def can_evade(self, enemies):
+        for enemy in enemies:
+            if abs(self.x - enemy.x) <= 1 and abs(self.y - enemy.y) <= 1:
+                if random.random() < 0.3:
+                    return True
+        return False
+
+    def evade(self):
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        random.shuffle(directions)
+        for dx, dy in directions:
+            new_x = self.x + dx
+            new_y = self.y + dy
+            if 0 <= new_x < LARGEUR_GRILLE // CELL_SIZE and 0 <= new_y < HEIGHT // CELL_SIZE:
+                self.x = new_x
+                self.y = new_y
+                print(f"{self.team} esquive et se déplace vers ({self.x}, {self.y}).")
+                return
+        print(f"{self.team} n'a pas pu esquiver.")
+
+    def move(self, dx, dy, map_instance=None, screen=None):
+        if map_instance is None or screen is None:
+            # Déplacement direct (IA)
+            new_x = self.x + dx
+            new_y = self.y + dy
+            if 0 <= new_x < (LARGEUR_GRILLE / CELL_SIZE) and 0 <= new_y < (HEIGHT / CELL_SIZE):
+                self.x = new_x
+                self.y = new_y
+            return
+
+        # Déplacement interactif (joueur)
+        L = map_instance.Liste_obstacles
+        L_eau = map_instance.Liste_vide
+        life = True
+        max_moves = self.vitesse
+        possible_moves = []
+        for ddx in range(-max_moves, max_moves + 1):
+            for ddy in range(-max_moves, max_moves + 1):
+                if abs(ddx) + abs(ddy) <= max_moves:
+                    new_x = self.x + ddx
+                    new_y = self.y + ddy
+                    if 0 <= new_x < (LARGEUR_GRILLE / CELL_SIZE) and 0 <= new_y < (HEIGHT / CELL_SIZE):
+                        if [new_x, new_y] not in L:
+                            possible_moves.append((new_x, new_y))
+
+        selector_x, selector_y = self.x, self.y
+        running = True
+        while running:
+            screen.fill(BLACK)
+            map_image = pygame.image.load(map_instance.fond)
+            map_image = pygame.transform.scale(map_image, (WIDTH, HEIGHT))
+            screen.blit(map_image, (0,0))
+
+            # Positions possibles
+            for move_x, move_y in possible_moves:
+                rect = pygame.Rect(move_x * CELL_SIZE, move_y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(screen, (200,255,0), rect, 1)
+
+            # Sélecteur
+            selector_rect = pygame.Rect(selector_x * CELL_SIZE, selector_y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+            pygame.draw.rect(screen, (0,0,255), selector_rect, 2)
+            screen.blit(self.image, (self.x * CELL_SIZE, self.y * CELL_SIZE))
+
+            pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    exit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_LEFT:
+                        selector_x = max(0, selector_x - 1)
+                    elif event.key == pygame.K_RIGHT:
+                        selector_x = min(LARGEUR_GRILLE // CELL_SIZE - 1, selector_x + 1)
+                    elif event.key == pygame.K_UP:
+                        selector_y = max(0, selector_y - 1)
+                    elif event.key == pygame.K_DOWN:
+                        selector_y = min(HEIGHT // CELL_SIZE - 1, selector_y + 1)
+                    elif event.key == pygame.K_RETURN:
+                        if (selector_x, selector_y) in possible_moves:
+                            self.x = selector_x
+                            self.y = selector_y
+                            for i in range(len(L_eau)):
+                                if (self.x == L_eau[i][0] and self.y == L_eau[i][1]):
+                                    life = False
+                            if not life:
+                                self.health = 0
+                            running = False
+                    elif event.key == pygame.K_ESCAPE:
+                        running = False
+
+    def show_attack(self, screen):
+        font_title = pygame.font.Font(None, 36)
         font_subtitle = pygame.font.Font(None, 15)
-        text_color = (196, 15,0)
-        images = [pygame.image.load(path) for path in image_paths]
-        button_rects = []
-        # Redimensionner les images
-        image_size = (100, 100)
-        images = [pygame.transform.scale(img, image_size) for img in images]
-        image_titles = [self.type_attaque[0][0][0],self.type_attaque[1][0][0], self.type_attaque[2][0][0],self.type_attaque[3][0][0]]
-        dx=self.x*30
-        dy=self.y*30
+        text_color = (196, 15, 0)
 
-        # Positionnement des images et titres
+        image_paths = [self.competences.image_path_attaque1, self.competences.image_path_attaque2]
+        images = []
+        for path in image_paths:
+            img = pygame.image.load(path)
+            img = pygame.transform.scale(img, (100, 100))
+            images.append(img)
+
+        image_titles = [self.competences.nom_attaque1, self.competences.nom_attaque2]
+
+        dx = self.x * CELL_SIZE
+        dy = self.y * CELL_SIZE
+
         image_spacing = 20
         start_x = dx + 20
         start_y = dy + 50
+
+        button_rects = []
         for i in range(len(images)):
-            button_rect = pygame.Rect(start_x + i * (image_size[0] + image_spacing), start_y, *image_size)
+            button_rect = pygame.Rect(start_x + i*(100+image_spacing), start_y, 100, 100)
             button_rects.append(button_rect)
-        frame_rect = pygame.Rect(dx,dy, 500, 200)
-        background_color = (30, 30, 30)  # Gris foncé
-        frame_color = (0,0,0)  # Rouge
-        frame_width =500
-        pygame.draw.rect(screen, frame_color, frame_rect, frame_width)
-        rectangle=pygame.draw.rect(screen, frame_color, frame_rect, frame_width)
 
-        # dessiner une image
-        #image = pygame.image.load("image_tech/technique_back.jpg")  # Remplacez "image.png" par le nom de votre fichier
-        #image = pygame.transform.scale(image, (500, 200))
-        #screen.blit(image, (frame_rect.x, frame_rect.y))
+        frame_rect = pygame.Rect(dx, dy, 500, 200)
+        frame_color = (133, 133, 133)
+        frame_width = 2
 
-        # Dessiner le titre
-        title_surface = font_title.render("Techniques d'affinite "+self.affinite, True, text_color)
+        transparent_surface = pygame.Surface((frame_rect.width, frame_rect.height), pygame.SRCALPHA)
+        frame_color_with_alpha = (frame_color[0], frame_color[1], frame_color[2], 128)
+        transparent_surface.fill(frame_color_with_alpha)
+        screen.blit(transparent_surface, (frame_rect.x, frame_rect.y))
+        pygame.draw.rect(screen, frame_color, frame_rect, width=frame_width)
+
+        title_surface = font_title.render(f"Techniques d'affinité: {self.affinite}", True, text_color)
         title_x = frame_rect.x + (frame_rect.width - title_surface.get_width()) // 2
         title_y = frame_rect.y + 10
         screen.blit(title_surface, (title_x, title_y))
 
-        # Dessiner les images et les sous-titres
         for i, (img, rect) in enumerate(zip(images, button_rects)):
-            # Dessiner l'image
             screen.blit(img, rect.topleft)
-
-            # Dessiner le sous-titre
             subtitle_surface = font_subtitle.render(image_titles[i], True, text_color)
-            subtitle_x = rect.x + (rect.width - subtitle_surface.get_width()) // 2
-            subtitle_y = rect.y + rect.height + 20
+            subtitle_x = rect.x + (rect.width - subtitle_surface.get_width())//2
+            subtitle_y = rect.y + rect.height + 10
             screen.blit(subtitle_surface, (subtitle_x, subtitle_y))
-        running = True
-        pygame.display.flip()
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-
-                # Détecter les clics sur les boutons
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    mouse_pos = pygame.mouse.get_pos()
-                    for i, rect in enumerate(button_rects):
-                        if rect.collidepoint(mouse_pos):
-                            print(f"Le bouton {i + 1} a été cliqué !")
-                            highlight_color = (0, 255, 0)
-                            pygame.draw.rect(screen, highlight_color, rect, 4)
-                            pygame.display.flip()
-                            running = False
-                            return i
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        running = False
-
 
         pygame.display.flip()
 
-    def attack(self, target,pv):
-        """Attaque une unité cible."""
-        if abs(self.x - target.x) <= 1 and abs(self.y - target.y) <= 1:
-            target.health -= self.type_attaque[pv][2][0]
+    def attack(self, target, attack_id=None):
+        # Détermination de la puissance de base et du coût en chakra
+        if attack_id is None:
+            # Attaque minimale
+            base_puissance = 1
+        else:
+            if attack_id == 0:
+                if self.chakra < self.competences.cout_chakra_attaque1:
+                    print("Pas assez de chakra pour l'attaque 1!")
+                    return
+                self.chakra -= self.competences.cout_chakra_attaque1
+                base_puissance = self.competences.puissance_attaque1
+            else:
+                if self.chakra < self.competences.cout_chakra_attaque2:
+                    print("Pas assez de chakra pour l'attaque 2!")
+                    return
+                self.chakra -= self.competences.cout_chakra_attaque2
+                base_puissance = self.competences.puissance_attaque2
+
+        # Calcul des dégâts ajustés
+        dmg = Unit.ajuster_degats(base_puissance, self.affinite, target.affinite)
+        print(f"DEBUG: Attaquant={self.affinite}, Cible={target.affinite}, Base={base_puissance}, Dmg={dmg}")
+
+        # Tentative d'esquive avant de subir les dégâts
+        if target.can_evade([self]):
+            print(f"{target.team} esquive l'attaque!")
+            target.evade()
+            return
+
+        # Application des dégâts si pas d'esquive
+        target.health -= dmg
+        if target.health < 0:
+            target.health = 0
+        print(f"{self.team} attaque {target.team} pour {int(dmg)} dégâts! PV restants : {target.health}")
 
     def draw(self, screen):
-        """Affiche l'unité sur l'écran."""
-        color = BLUE if self.team == 'player' else RED
-        if self.is_selected:
-            pygame.draw.rect(screen, GREEN, (self.x * CELL_SIZE,
-                             self.y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-        pygame.draw.circle(screen, color, (self.x * CELL_SIZE + CELL_SIZE //
-                           2, self.y * CELL_SIZE + CELL_SIZE // 2), CELL_SIZE // 3)
-    def affiche_stat(self,screen):
-        # Texte à afficher
-        WHITE = (255, 255, 255)
-        BLACK = (0, 0, 0)
-        VERT = (255, 255, 255)
-        ROUGE = (255, 255, 255)
-        color = (0, 0, 0)
-        #barre_de_vie = pygame.draw.rect(self.screen, color, pygame.Rect(400, 0, WIDTH, HEIGHT))
+        if self.health == 0:
+            skull_image = pygame.image.load("icone/crane.png")
+            skull_rect = skull_image.get_rect()
+            screen_width, screen_height = WIDTH, HEIGHT
+            skull_rect.center = (screen_width // 2, screen_height // 2)
+            screen.blit(skull_image, skull_rect)
+        else:
+            screen.blit(self.image, (self.x * CELL_SIZE, self.y * CELL_SIZE))
 
-        # Définition de la police de texte
+    @staticmethod
+    def affiche_stat(screen, player_units, enemy_units):
         font = pygame.font.Font(None, 22)
-        nb_player = 0
-        nb_player_line = 0
-        for player in self.player_units:
-            #texte = f"Charter player---> {nb_player}"
-            #text_surface = font.render(texte, True, VERT)
-            #self.screen.blit(text_surface, (GRID_SIZE * CELL_SIZE, nb_player_line))
+        for unit in player_units:
+            texte_chakra = f"{unit.chakra}"
+            text_surface_chakra = font.render(texte_chakra, True, (255,255,255))
+            screen.blit(text_surface_chakra, (unit.x * CELL_SIZE + CELL_SIZE, unit.y * CELL_SIZE + CELL_SIZE))
 
-            #texte = f"x:{player.x}  y:{player.y}  Pv:{player.health}  Pwr:{player.attack_power} "
-            #text_surface = font.render(texte, True, VERT)
-            #self.screen.blit(text_surface, (GRID_SIZE * CELL_SIZE, nb_player_line + 15))
+            texte_health = f"{unit.health}"
+            text_surface_health = font.render(texte_health, True, (255,255,255))
+            screen.blit(text_surface_health, (unit.x * CELL_SIZE + CELL_SIZE, unit.y * CELL_SIZE - CELL_SIZE))
 
-            for i in range(0, player.health, 10):
-                image = pygame.image.load("icone/coeur.png")  # Charge l'image
-                image = pygame.transform.scale(image, (10, 10))  # Redimensionne l'image
+        for unit in enemy_units:
+            texte_chakra = f"{unit.chakra}"
+            text_surface_chakra = font.render(texte_chakra, True, (255,255,255))
+            screen.blit(text_surface_chakra, (unit.x * CELL_SIZE + CELL_SIZE, unit.y * CELL_SIZE + CELL_SIZE))
 
-                # Calcule les coordonnées décalées en fonction de `i`
-                x_offset = player.x * (LARGEUR_GRILLE / (CELL_SIZE - 6)) + i # Décalage horizontal
-                y_offset = player.y * (HEIGHT / (GRID_SIZE))  # Pas de décalage vertical ici, mais vous pouvez l'ajouter
-
-                # Affiche l'image à la position décalée
-                self.screen.blit(image, (x_offset-30, y_offset+40))
-
-
-
-            nb_player = nb_player + 1
-            nb_player_line = nb_player_line + 35
-        nb_player = 0
-        for player in self.enemy_units:
-            #texte = f"Charter enemy---> {nb_player}"
-            #text_surface = font.render(texte, True, ROUGE)
-            #self.screen.blit(text_surface, (GRID_SIZE * CELL_SIZE, nb_player_line))
-
-            #texte = f"x:{player.x}  y:{player.y}  Pv:{player.health}  Pwr:{player.attack_power} "
-            #text_surface = font.render(texte, True, ROUGE)
-            #self.screen.blit(text_surface, (GRID_SIZE * CELL_SIZE, nb_player_line + 15))
-
-            nb_player = nb_player + 1
-            nb_player_line = nb_player_line + 35
-
-
-        #surface = pygame.display.set_mode((400, 300))
-
-
-
+            texte_health = f"{unit.health}"
+            text_surface_health = font.render(texte_health, True, (255,255,255))
+            screen.blit(text_surface_health, (unit.x * CELL_SIZE + CELL_SIZE, unit.y * CELL_SIZE - CELL_SIZE))

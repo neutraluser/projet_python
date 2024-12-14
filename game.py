@@ -3,160 +3,231 @@ import random
 
 from unit import *
 from level import *
+from animation import *
+from EcranAccueil import *
+from Soins import *
+from Select_perso import selectionner_personnage
+from Personnage import *
+from EcranRegles import *
+from trainer import Trainer
+
+personnage_feu = Personnage("Edan", 150, 200, "Feu", "personnage/feu.png")
+personnage_eau = Personnage("Oceane", 120, 180, "Eau","personnage/eau.png")
+personnage_foudre = Personnage("Zeus", 110, 190, "Foudre","personnage/foudre.png")
 
 class Game:
-    """
-    Classe pour représenter le jeu.
+    def __init__(self, screen, map_instance, joueur1, joueur2):
+        self.screen = screen
+        self.player_units = [
+            Unit(0, 6, joueur1.health, 1, "player", joueur1.competences, joueur1.chakra, joueur1.affinite, joueur1.image, joueur1.competences.vitesse),
+            Unit(1, 6, joueur2.health, 1, "player", joueur2.competences, joueur2.chakra, joueur2.affinite, joueur2.image, joueur2.competences.vitesse)
+        ]
+        self.enemy_units = []
+        images = charger_images()
+        self.cases = generer_cases(images, map_instance)
 
-    ...
-    Attributs
-    ---------
-    screen: pygame.Surface
-        La surface de la fenêtre du jeu.
-    player_units : list[Unit]
-        La liste des unités du joueur.
-    enemy_units : list[Unit]
-        La liste des unités de l'adversaire.
-    """
+        self.trainer = Trainer(self.enemy_units)
 
-    def __init__(self, screen):
+    def assign_ia_character(self, joueur_affinite):
         """
-        Construit le jeu avec la surface de la fenêtre.
-
-        Paramètres
-        ----------
-        screen : pygame.Surface
-            La surface de la fenêtre du jeu.
+        Choisit l'affinité de l'IA en fonction de l'affinité du joueur pour maximiser les dégâts.
         """
-        #===========la liste des attaques sont données comme suit==============>
-        #[nom],[image],[Puissance d’attaque],[terrain	Puissance de défence],[Cout chakra]
-        attaque_basique_feu=[[["Katon-boule de feu"],["image_tech/Katon-Goukakyuu-no-Jutsu.jpg"],[90],[0],[20],[50]],
-                             [["Katon - Nuées ardentes"],["image_tech/Haisekish__1.png"], [80], [10], [2], [20]],
-                             [["Katon - balsamine"],["image_tech/Katon_-_Balsamine_Pourpre.png"], [50], [0], [2], [5]],
-                             [["Katon - Embrasement"],["image_tech/Katon_-_G_ka_Mekkyaku.png"], [100], [5], [30], [60]],]
-        affinite="Katon"
+        possible_affinites = ["Feu", "Eau", "Foudre"]
+        modifiers = {
+            "Feu": {"Eau": 0.8, "Foudre": 1.2, "Feu": 1.0},
+            "Eau": {"Feu": 1.5, "Foudre": 0.8, "Eau": 1.0},
+            "Foudre": {"Eau": 1.1, "Feu": 0.9, "Foudre": 1.0}
+        }
 
-        attaque_basique_feu = [
-            [["Katon-boule de feu"], ["image_tech/Katon-Goukakyuu-no-Jutsu.jpg"], [90], [0], [20], [50]],
-            [["Katon - Nuées ardentes"], ["image_tech/Haisekish__1.png"], [80], [10], [2], [20]],
-            [["Katon - balsamine"], ["image_tech/Katon_-_Balsamine_Pourpre.png"], [50], [0], [2], [5]],
-            [["Katon - Embrasement"], ["image_tech/Katon_-_G_ka_Mekkyaku.png"], [100], [5], [30], [60]], ]
-        affinite = "Katon"
-        self.screen = screen #position(x,y)
-        self.player_units = [Unit(0, 6, 100, 2, 'player',attaque_basique_feu,200,affinite),
-                             Unit(1, 0, 100, 2, 'player',attaque_basique_feu,200,affinite)]
+        best_affinite = None
+        best_multiplier = -1
 
-        self.enemy_units = [Unit(6, 6, 120, 0, 'enemy',attaque_basique_feu,200,affinite),
-                            Unit(7, 6, 120, 1, 'enemy',attaque_basique_feu,200,affinite)]
+        for aff in possible_affinites:
+            mult = modifiers.get(aff, {}).get(joueur_affinite, 1.0)
+            if mult > best_multiplier:
+                best_multiplier = mult
+                best_affinite = aff
 
-    def handle_player_turn(self):
-        """Tour du joueur"""
+        # Choix de l'image en fonction de l'affinité IA choisie
+        if best_affinite == "Feu":
+            ia_image = "personnage/feu.png"
+        elif best_affinite == "Eau":
+            ia_image = "personnage/eau.png"
+        else:
+            ia_image = "personnage/foudre.png"
+
+        # Configuration de l'IA
+        self.trainer.setup_ia_character(best_affinite)
+        self.trainer.add_unit(Unit(6, 6, self.trainer.health, None, "enemy", self.trainer.type_attaque,
+                                   self.trainer.chakra, self.trainer.affinite, ia_image, self.trainer.type_attaque.vitesse))
+        self.trainer.add_unit(Unit(7, 6, self.trainer.health, None, "enemy", self.trainer.type_attaque,
+                                   self.trainer.chakra, self.trainer.affinite, ia_image, self.trainer.type_attaque.vitesse))
+
+    def handle_player_turn(self, map_instance):
         for selected_unit in self.player_units:
-
-            # Tant que l'unité n'a pas terminé son tour
-            has_acted = False# tour pas terminé
+            has_acted = False
             selected_unit.is_selected = True
-            self.flip_display()# mis a jour de l'affichage
+            self.flip_display()
+
             while not has_acted:
-
-                # Important: cette boucle permet de gérer les événements Pygame
                 for event in pygame.event.get():
-
-                    # Gestion de la fermeture de la fenêtre
                     if event.type == pygame.QUIT:
                         pygame.quit()
                         exit()
 
-                    # Gestion des touches du clavier
                     if event.type == pygame.KEYDOWN:
-
-                        # Déplacement (touches fléchées)
                         dx, dy = 0, 0
                         if event.key == pygame.K_LEFT:
-                            dx = -1
+                            dx, dy = -1, 0
                         elif event.key == pygame.K_RIGHT:
-                            dx = 1
+                            dx, dy = 1, 0
                         elif event.key == pygame.K_UP:
                             dy = -1
                         elif event.key == pygame.K_DOWN:
                             dy = 1
-                        selected_unit.move(dx, dy)
-                        self.flip_display()
-                        pv_attack=selected_unit.attack_power
 
-                        if event.key == pygame.K_a:  # Touche 'A'
-                             pv_attack=selected_unit.show_attack(self.screen)
-                             #self.flip_display()
-
-                        # Attaque (touche espace) met fin au tour
-                        if event.key == pygame.K_SPACE:
-                            for enemy in self.enemy_units:
-                                if abs(selected_unit.x - enemy.x) <= 1 and abs(selected_unit.y - enemy.y) <= 1:
-                                    selected_unit.attack(enemy,pv_attack)
-                                    if enemy.health <= 0:
-                                        self.enemy_units.remove(enemy)
-
+                        if dx != 0 or dy != 0:
+                            selected_unit.move(dx, dy, map_instance, self.screen)
+                            for case in self.cases:
+                                if isinstance(case, Soins) and case.case_soin(selected_unit):
+                                    self.cases.remove(case)
+                                    break
                             has_acted = True
                             selected_unit.is_selected = False
+                            self.flip_display()
+
+                        elif event.key == pygame.K_a:
+                            selected_unit.show_attack(self.screen)
+                            attack_selected = False
+                            attack_id = None
+                            while not attack_selected:
+                                for attack_event in pygame.event.get():
+                                    if attack_event.type == pygame.KEYDOWN:
+                                        if attack_event.key == pygame.K_1:
+                                            attack_id = 0
+                                            attack_selected = True
+                                        elif attack_event.key == pygame.K_2:
+                                            attack_id = 1
+                                            attack_selected = True
+                                        elif attack_event.key == pygame.K_ESCAPE:
+                                            attack_selected = True
+
+                            if attack_id is not None:
+                                if attack_id == 0 and selected_unit.chakra < selected_unit.competences.cout_chakra_attaque1:
+                                    print("Pas assez de chakra!")
+                                    continue
+                                if attack_id == 1 and selected_unit.chakra < selected_unit.competences.cout_chakra_attaque2:
+                                    print("Pas assez de chakra!")
+                                    continue
+
+                                target_x, target_y = selected_unit.x, selected_unit.y
+                                selecting_target = True
+                                attack_range = selected_unit.competences.zone_attaque1 if attack_id==0 else selected_unit.competences.zone_attaque2
+
+                                while selecting_target:
+                                    self.flip_display()
+                                    for dx2 in range(-attack_range, attack_range + 1):
+                                        for dy2 in range(-attack_range, attack_range + 1):
+                                            if abs(dx2) + abs(dy2) <= attack_range:
+                                                ax = selected_unit.x + dx2
+                                                ay = selected_unit.y + dy2
+                                                if 0 <= ax < GRID_SIZE and 0 <= ay < 42:
+                                                    pygame.draw.rect(self.screen,(255, 0, 0),(ax*CELL_SIZE, ay*CELL_SIZE, CELL_SIZE, CELL_SIZE),2)
+                                    pygame.draw.rect(self.screen,(0, 255, 0),(target_x*CELL_SIZE, target_y*CELL_SIZE, CELL_SIZE, CELL_SIZE),2)
+                                    pygame.display.flip()
+
+                                    for target_event in pygame.event.get():
+                                        if target_event.type == pygame.KEYDOWN:
+                                            if target_event.key == pygame.K_LEFT:
+                                                target_x = max(0, target_x - 1)
+                                            elif target_event.key == pygame.K_RIGHT:
+                                                target_x = min(GRID_SIZE-1, target_x + 1)
+                                            elif target_event.key == pygame.K_UP:
+                                                target_y = max(0, target_y - 1)
+                                            elif target_event.key == pygame.K_DOWN:
+                                                target_y = min(41, target_y + 1)
+                                            elif target_event.key == pygame.K_RETURN:
+                                                if abs(target_x - selected_unit.x)+ abs(target_y - selected_unit.y)<=attack_range:
+                                                    for enemy in self.trainer.enemy_units:
+                                                        if enemy.x == target_x and enemy.y == target_y:
+                                                            selected_unit.attack(enemy, attack_id)
+                                                            if enemy.health <= 0:
+                                                                self.trainer.enemy_units.remove(enemy)
+                                                            self.handle_enemy_turn()
+                                                    selecting_target = False
+                                                    has_acted = True
+                                                    selected_unit.is_selected = False
+                                                else:
+                                                    print("Cible hors de portée!")
+                                            elif target_event.key == pygame.K_ESCAPE:
+                                                selecting_target = False
+                                                break
 
     def handle_enemy_turn(self):
-        """IA très simple pour les ennemis."""
-        for enemy in self.enemy_units:
-
-            # Déplacement aléatoire
-            target = random.choice(self.player_units)
-            dx = 1 if enemy.x < target.x else -1 if enemy.x > target.x else 0
-            dy = 1 if enemy.y < target.y else -1 if enemy.y > target.y else 0
-            enemy.move(dx, dy)
-
-            # Attaque si possible
-            if abs(enemy.x - target.x) <= 1 and abs(enemy.y - target.y) <= 1:
-                enemy.attack(target)
-                if target.health <= 0:
-                    self.player_units.remove(target)
+        self.trainer.handle_turn(self.player_units, self.screen)
 
     def flip_display(self):
-        """Affiche le jeu."""
-        WHITE = (255, 255, 255)
         BLACK = (0, 0, 0)
-
-        # Affiche la grille
         self.screen.fill(BLACK)
-        level_map(self.screen, HEIGHT, LARGEUR_GRILLE)
-        Unit.affiche_stat(self, self.screen)
-        for x in range(0, LARGEUR_GRILLE, CELL_SIZE):
-            for y in range(0, HEIGHT, CELL_SIZE):
-                rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
-               # pygame.draw.rect(self.screen, WHITE, rect, 1)
+        map_instance = Map("Map1", WIDTH, HEIGHT, self.screen)
+        Unit.affiche_stat(self.screen, self.player_units, self.trainer.enemy_units)
 
+        for unit in self.player_units + self.trainer.enemy_units:
+            if unit.health == 0:
+                skull_image = pygame.image.load("icone/crane.png")
+                skull_rect = skull_image.get_rect()
+                screen_width, screen_height = WIDTH, HEIGHT
+                skull_rect.center = (screen_width // 2, screen_height // 2)
+                self.screen.blit(skull_image, skull_rect)
+                pygame.display.flip()
+                if unit in self.player_units:
+                    self.player_units.remove(unit)
+                else:
+                    self.trainer.enemy_units.remove(unit)
+            else:
+                unit.draw(self.screen)
 
-        # Affiche les unités
-        for unit in self.player_units + self.enemy_units:
-            unit.draw(self.screen)
-
-
-
-
+        for case in self.cases:
+            case.afficher_case(self.screen)
         pygame.display.flip()
 
 
 def main():
-
-    # Initialisation de Pygame
+    global map_instance
     pygame.init()
-    # Instanciation de la fenêtre
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Mon jeu de stratégie")
+    map_instance = Map("Map1", WIDTH, HEIGHT, screen)
 
-    # Instanciation du jeu
-    print(type(screen))
-    game = Game(screen)
-    #initalisation de l'environement et son
-    #play_music(screen)
+    ecran_accueil = EcranAccueil(screen)
+    ecran_regles = EcranRegles(screen)
 
-    # Boucle principale du jeu
     while True:
-        game.handle_player_turn()
+        result = ecran_accueil.boucle_principale()
+        if result == "play":
+            break
+        elif result == "regles":
+            retour = ecran_regles.boucle_principale()
+            if retour == "retour":
+                continue
+
+    personnage_choisi = selectionner_personnage("joueur 1")
+    personnages_mapping = {
+        "Feu": personnage_feu,
+        "Eau": personnage_eau,
+        "Foudre": personnage_foudre,
+    }
+    joueur1 = personnages_mapping[personnage_choisi]
+
+    personnage_choisi = selectionner_personnage("joueur 2")
+    joueur2 = personnages_mapping[personnage_choisi]
+
+    game = Game(screen, map_instance, joueur1, joueur2)
+    game.assign_ia_character(joueur1.affinite)
+
+    while True:
+        game.handle_player_turn(map_instance)
         game.handle_enemy_turn()
+
 if __name__ == "__main__":
     main()

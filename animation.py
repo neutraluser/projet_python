@@ -1,4 +1,5 @@
 import pygame
+from competences import *
 
 def fireball_animation(player ,enemys ,screen, fireball_image, trajectory, cell_size ,pv_attack):
     """Anime une boule de feu suivant une trajectoire."""
