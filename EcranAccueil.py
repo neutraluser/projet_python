@@ -7,23 +7,21 @@ Created on Sat Dec  7 13:34:50 2024
 """
 
 import pygame
-from unit import *
+from unit import *  # Importe les constantes nécessaires
+from EcranRegles import *  # Importe la classe EcranRegles
 
 class EcranAccueil:
     def __init__(self, screen):
         self.screen = screen
         self.running = True
-        # Charger l'image de fond
         self.background = pygame.image.load("Ecran_acc/fond3.png")
-        self.background = pygame.transform.scale(self.background, (WIDTH, HEIGHT))  
-        
+        self.background = pygame.transform.scale(self.background, (WIDTH, HEIGHT))
 
-    def afficher_texte(self, texte, taille, couleur, x, y, police_path = None):
-        # Si une police personnalisée est donnée, l'utiliser, sinon utiliser la police par défaut
+    def afficher_texte(self, texte, taille, couleur, x, y, police_path=None):
         if police_path:
             font = pygame.font.Font(police_path, taille)
         else:
-            font = pygame.font.Font(None, taille)  # Police par défaut
+            font = pygame.font.Font(None, taille)
 
         surface = font.render(texte, True, couleur)
         rect = surface.get_rect(center=(x, y))
@@ -31,41 +29,48 @@ class EcranAccueil:
 
     def boucle_principale(self):
         clock = pygame.time.Clock()
-        
-        # Dimensions du bouton
-        bouton_largeur = 200
-        bouton_hauteur = 50
-        bouton_x = (WIDTH - bouton_largeur) // 2
-        bouton_y = (HEIGHT // 2) + 100
+
+        bouton_play_largeur = 200
+        bouton_play_hauteur = 50
+        bouton_play_x = (WIDTH - bouton_play_largeur) // 2
+        bouton_play_y = (HEIGHT // 2) + 100
+
+        bouton_regles_largeur = 200
+        bouton_regles_hauteur = 50
+        bouton_regles_x = (WIDTH - bouton_regles_largeur) // 2
+        bouton_regles_y = bouton_play_y + bouton_play_hauteur + 20
 
         while self.running:
-            
-            # Afficher l'image de fond
             self.screen.blit(self.background, (0, 0))
 
-            # Texte principal
             self.afficher_texte("Mon Jeu de Stratégie", 80, BLACK, WIDTH // 2, HEIGHT // 4, "police/police3.ttf")
+            self.afficher_texte("Appuyez sur PLAY pour commencer", 50, WHITE, WIDTH // 2, HEIGHT // 2 - 50)
 
-            # Instructions
-            self.afficher_texte("Appuyez sur PLAY pour commencer", 80, WHITE, WIDTH // 2, HEIGHT // 2)
+            pygame.draw.rect(self.screen, GREEN, (bouton_play_x, bouton_play_y, bouton_play_largeur, bouton_play_hauteur))
+            self.afficher_texte("PLAY", 40, BLACK, bouton_play_x + bouton_play_largeur // 2, bouton_play_y + bouton_play_hauteur // 2)
 
-            # Bouton "Play"
-            pygame.draw.rect(self.screen, GREEN, (bouton_x, bouton_y, bouton_largeur, bouton_hauteur))
-            self.afficher_texte("PLAY", 40, BLACK, bouton_x + bouton_largeur // 2, bouton_y + bouton_hauteur // 2)
+            pygame.draw.rect(self.screen, BLUE, (bouton_regles_x, bouton_regles_y, bouton_regles_largeur, bouton_regles_hauteur))
+            self.afficher_texte("RÈGLES", 40, WHITE, bouton_regles_x + bouton_regles_largeur // 2, bouton_regles_y + bouton_regles_hauteur // 2)
 
             pygame.display.flip()
 
-            # Gestion des événements
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     exit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
-                    # Vérifie si le clic est dans le bouton
-                    if bouton_x <= x <= bouton_x + bouton_largeur and bouton_y <= y <= bouton_y + bouton_hauteur:
-                        self.running = False  # Quitter la boucle et passer à l'écran du jeu
-                        return True  # Indiquer que le jeu peut démarrer
+                    if bouton_play_x <= x <= bouton_play_x + bouton_play_largeur and bouton_play_y <= y <= bouton_play_y + bouton_play_hauteur:
+                        self.running = False
+                        return "play"
+                    elif bouton_regles_x <= x <= bouton_regles_x + bouton_regles_largeur and bouton_regles_y <= y <= bouton_regles_y + bouton_regles_hauteur:
+                        # Instancier l'écran des règles et lancer sa boucle
+                        ecran_regles = EcranRegles(self.screen)
+                        result = ecran_regles.boucle_principale()
+                        if result == "retour":
+                            continue  # Retourne à l'écran d'accueil
 
             clock.tick(FPS)
+
+
 

@@ -8,11 +8,11 @@ Created on Mon Dec  9 11:31:04 2024
 
 import pygame
 import random
-import os  # Pour gérer les chemins des fichiers
+import os  
 
-from unit import *  # Assurez-vous que cette importation est correcte
+from unit import *  
 
-# Chemin vers le dossier contenant l'image des soins
+
 IMAGE_PATH = "icone/coeur.png"
 
 class Soins:
@@ -85,7 +85,7 @@ class Soins:
             screen.blit(resized_image, (self.x * CELL_SIZE, self.y * CELL_SIZE))
             
 
-def generer_cases(images):
+def generer_cases(images,map_instance):
     """
     Génère les cases sur la grille avec des types aléatoires et des images.
 
@@ -107,11 +107,35 @@ def generer_cases(images):
     random.shuffle(positions)
 
     all_cases = []
+    Liste_obstacle=map_instance.Liste_obstacles
+    Liste_eau=map_instance.Liste_vide
     for case_type in cases_types:
         x, y = positions.pop()
+        for i in range(len(Liste_obstacle)):
+            if(x==Liste_obstacle[i][0] and y==Liste_obstacle[i][1]):
+                print(f"il a generer dans l'obstacle x={x} et y={y}")
+                for j in range(len(Liste_obstacle)):
+                    while(x==Liste_obstacle[j][0] and y==Liste_obstacle[j][1]):
+                        random_position = (random.randint(0, (WIDTH // CELL_SIZE) - 1) * CELL_SIZE,
+                                           random.randint(0, (HEIGHT // CELL_SIZE) - 1) * CELL_SIZE)
+
+                        x=random_position[0]
+                        y=random_position[1]
+        for i in range(len(Liste_eau)):
+            if (x==Liste_eau[i][0] and y== Liste_eau[i][1]):
+                print(f"il a generer dans l'eau x={x} et y={y}")
+                for j in range(len(Liste_eau)):
+                    while (x== Liste_eau[j][0] and y== Liste_eau[j][1]):
+                        random_position = (random.randint(0, (WIDTH // CELL_SIZE) - 1) * CELL_SIZE,
+                                           random.randint(0, (HEIGHT // CELL_SIZE) - 1) * CELL_SIZE)
+
+                        x = random_position[0]
+                        y = random_position[1]
+                print(f"on a remplace par x={x} et y={y}")
+
         if case_type == "soin":
             # Assurez-vous que l'image "coeur.png" est correctement chargée
-            case = Soins(x, y, soin=1, case_type="soin", image=images["soin"])
+            case = Soins(x, y, soin=30, case_type="soin", image=images["soin"])
             all_cases.append(case)
 
     return all_cases
